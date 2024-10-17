@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Collections;
 using UnityEngine.Rendering;
 using System.Threading;
-using UnityEngine.InputSystem.Android;
+using System.Threading.Tasks;
 
 public class FindingShortestPathForGivenPoints : MonoBehaviour
 {
@@ -31,6 +31,8 @@ public class FindingShortestPathForGivenPoints : MonoBehaviour
     GameObject[] points;
     Stopwatch stopwatch = new Stopwatch();
     List<GameObject> lines = new List<GameObject>();
+
+    Thread newThread;
 
     private void Start()
     {
@@ -57,91 +59,44 @@ public class FindingShortestPathForGivenPoints : MonoBehaviour
             }
         }
         stopwatch.Start();
-        //BackTrackA(indices, results);
-        StartCoroutine(BackTrackCoroutine(indices, results));
+        newThread = new Thread(() => BackTrackNoCor(indices, 0, results));
+        newThread.Start();
 
     }
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-            Reset();
-
-        if (Time.time >= nextUpdateTime)
-            UpdateUI();
-    }
-    #region
-    //void BackTrackA(int[] indices, List<int[]> results)
-    //{
-    //    BackTrack(indices, 0, results);
-    //    //FindShortestPathBeetwenObjects(results);
-    //    stopwatch.Stop();
-
-    //    foreach (var result in results)
-    //    {
-    //        UnityEngine.Debug.Log(string.Join(", ", result));
-    //    }
-    //}
-    //void BackTrack(int[] indices, int index, List<int[]> results)
-    //{
-    //    if (index == indices.Length - 1)
-    //    {
-    //        results.Add((int[])indices.Clone());
-    //        calculatedFactorial = results.Count; // Update the calculated factorial count
-    //    }
-    //    // Recursively generate permutations with the last index fixed
-    //    // (should reduce the number of permutations - skips identical permutations with different starting points?)
-    //    for (int i = index; i < indices.Length - 1; i++)
-    //    {
-    //        Swap(indices, index, i); // makes a choice
-    //        BackTrack(indices, index + 1, results);
-    //        if (results.Count - 1 == counter)
-    //        {
-    //            FindShortestPathForCurrentCombination(results[counter], counter);
-    //            counter++;
-    //        }
-    //        Swap(indices, index, i); // backtracks a choice            
-    //    }
-
-    //}
-    #endregion
-    #region coroutine   //much slower
-    IEnumerator BackTrackCoroutine(int[] indices, List<int[]> results)
-    {
-        yield return StartCoroutine(BackTrack(indices, 0, results));
-        //yield return StartCoroutine(FindShortestPathBeetwenObjects(results));
-        stopwatch.Stop();
-
-        foreach (var result in results)
+        if (newThread.IsAlive)
         {
-            UnityEngine.Debug.Log(string.Join(", ", result));
+            DestroyLines();
+            DrawLine(shortestCombination);
+            UpdateUI();
+        }
+        else
+        {
+            stopwatch.Stop();
         }
     }
-    IEnumerator BackTrack(int[] indices, int index, List<int[]> results)
+    void BackTrackNoCor(int[] indices, int index, List<int[]> results)
     {
         if (index == indices.Length - 1)
         {
             results.Add((int[])indices.Clone());
-            //calculatedFactorial = results.Count; // Update the calculated factorial count
-            yield break;
+            calculatedFactorial = results.Count; // Update the calculated factorial count
+        }
+        if (results.Count - 1 == counter)
+        {
+            FindShortestPathForCurrentCombination(results[counter], counter);
+            counter++;
         }
         // Recursively generate permutations with the last index fixed
         // (should reduce the number of permutations - skips identical permutations with different starting points?)
         for (int i = index; i < indices.Length - 1; i++)
         {
             Swap(indices, index, i); // makes a choice
-            yield return StartCoroutine(BackTrack(indices, index + 1, results));
-            if (results.Count - 1 == counter)
-            {
-                FindShortestPathForCurrentCombination(results[counter], counter);
-                counter++;
-            }
+            BackTrackNoCor(indices, index + 1, results);
             Swap(indices, index, i); // backtracks a choice            
-                                     // Yield control back to the main thread
-            yield return null;
         }
     }
-    #endregion
-
     void Swap(int[] array, int i, int j)
     {
         int temp = array[i];
@@ -172,6 +127,7 @@ public class FindingShortestPathForGivenPoints : MonoBehaviour
         }
         lines.Clear();
     }
+
     void FindShortestPathForCurrentCombination(int[] results, int counter)
     {
         for (int j = 0; j < results.Length; j++)
@@ -187,38 +143,10 @@ public class FindingShortestPathForGivenPoints : MonoBehaviour
         {
             shortestDistance = distance;
             shortestCombination = results;
-            DestroyLines();
-            DrawLine(shortestCombination);
         }
         distance = 0;
         calculatedFactorial = counter + 1;
     }
-    //void FindShortestPathBeetwenObjects(List<int[]> results)
-    //{
-    //    for (int i = 0; i < results.Count; i++)
-    //    {
-    //        for (int j = 0; j < results[i].Length; j++)
-    //        {
-    //            int nextIndex = (j + 1) % results[i].Length; // if j is the last index, nextIndex will be 0
-    //            distance += distanceMatrix[results[i][j], results[i][nextIndex]];
-    //        }
-    //        if (shortestDistance == 0)
-    //        {
-    //            shortestDistance = distance;
-    //        }
-    //        if (distance < shortestDistance)
-    //        {
-    //            shortestDistance = distance;
-    //            shortestCombination = results[i];
-    //            DestroyLines();
-    //            DrawLine(shortestCombination);
-    //        }
-    //        distance = 0;
-    //        calculatedFactorial = i + 1;
-    //    }
-    //    UnityEngine.Debug.Log("Shortest Distance: " + shortestDistance);   
-    //}
-
 
     //Connects Points from point 1 to point 2 to point 3 and so on, redundant
     void FindPathWithIndexes()
@@ -277,8 +205,7 @@ public class FindingShortestPathForGivenPoints : MonoBehaviour
         stopwatch.Reset();
         calculatedFactorial = 0;
         counter = 0;
-        DestroyLines();
-
+        
         StopAllCoroutines();
         Start();
     }
@@ -297,7 +224,8 @@ public class FindingShortestPathForGivenPoints : MonoBehaviour
         float c = (float)calculatedFactorial / factorial * 100;
         return Mathf.Round(c);
     }
-
-
-
+    public void NewCalculation()
+    {
+       Reset();
+    }
 }
