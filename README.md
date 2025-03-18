@@ -10,5 +10,8 @@ New ants will be then "recruited" to follow pheromone trail.
 
 https://github.com/user-attachments/assets/994f9766-b249-4fa7-8922-824fb8b01f7f
 
+Increased visibility, now pheromones are displayed as particles.
+
+https://github.com/user-attachments/assets/1a21981e-4d65-474f-9843-e305d28c2ef5
 
 
